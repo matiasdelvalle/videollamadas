@@ -2,7 +2,7 @@
     "private": true,
     "type": "module",
     "scripts": {
-        "build": "VITE_BASE_URL='/videollamada/public/' vite build  --minify terser",
+        "build": "VITE_BASE_URL='/' vite build  --minify terser",
         "local": "VITE_BASE_URL='/gms/videollamada/public/' vite build --minify terser",
         "dev": "VITE_BASE_URL='/gms/videollamada/public/' vite"
     },
