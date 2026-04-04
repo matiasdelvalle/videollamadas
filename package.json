@@ -1,0 +1,21 @@
+{
+    "private": true,
+    "type": "module",
+    "scripts": {
+        "build": "VITE_BASE_URL='/videollamada/public/' vite build  --minify terser",
+        "local": "VITE_BASE_URL='/gms/videollamada/public/' vite build --minify terser",
+        "dev": "VITE_BASE_URL='/gms/videollamada/public/' vite"
+    },
+    "devDependencies": {
+        "@inertiajs/vue3": "^1.0.0",
+        "@tailwindcss/vite": "^4.2.2",
+        "@vitejs/plugin-vue": "^5.0.0",
+        "autoprefixer": "^10.4.12",
+        "axios": "^1.6.4",
+        "laravel-vite-plugin": "^1.0.0",
+        "postcss": "^8.4.31",
+        "tailwindcss": "^4.2.2",
+        "vite": "^5.0.0",
+        "vue": "^3.4.0"
+    }
+}
