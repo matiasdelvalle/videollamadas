@@ -263,6 +263,11 @@ class VideoConsultaController extends Controller
                 'user' => [
                     'name' => $nombre ?: 'Invitado',
                     'email' => null,
+                    // 👇 CLAVE
+                    'affiliation' => $esModerador ? 'owner' : 'member',
+                ],
+                // 👇 también ayuda en algunos setups
+                'features' => [
                     'moderator' => $esModerador,
                 ],
             ],
