@@ -15,10 +15,18 @@ const props = defineProps({
 
 const consulta = ref(null)
 const loading = ref(true)
-const jitsiUrl = ref(null)
 const error = ref('')
 
+const jitsiContainer = ref(null)
+
+const jitsiData = ref({
+    domain: null,
+    room: null,
+    jwt: null,
+})
+
 let interval = null
+let jitsiApi = null
 
 const loadConsulta = async () => {
     try {
@@ -33,20 +41,108 @@ const loadConsulta = async () => {
     }
 }
 
+const loadJitsiScript = () => {
+    return new Promise((resolve, reject) => {
+        if (window.JitsiMeetExternalAPI) {
+            return resolve()
+        }
+
+        const existing = document.querySelector('script[data-jitsi-api="1"]')
+        if (existing) {
+            existing.addEventListener('load', resolve)
+            existing.addEventListener('error', reject)
+            return
+        }
+
+        const script = document.createElement('script')
+        script.src = 'https://meet.jit.si/external_api.js'
+        script.dataset.jitsiApi = '1'
+        script.onload = resolve
+        script.onerror = reject
+        document.body.appendChild(script)
+    })
+}
+
+const destroyJitsi = () => {
+    if (jitsiApi) {
+        try {
+            jitsiApi.dispose()
+        } catch (e) {
+            console.error('Error disposing Jitsi', e)
+        }
+        jitsiApi = null
+    }
+
+    jitsiData.value = {
+        domain: null,
+        room: null,
+        jwt: null,
+    }
+
+    if (jitsiContainer.value) {
+        jitsiContainer.value.innerHTML = ''
+    }
+}
+
+const mountJitsi = async () => {
+    if (!jitsiContainer.value) return
+    if (!jitsiData.value.domain || !jitsiData.value.room || !jitsiData.value.jwt) return
+    if (jitsiApi) return
+
+    try {
+        await loadJitsiScript()
+
+        jitsiApi = new window.JitsiMeetExternalAPI(jitsiData.value.domain, {
+            parentNode: jitsiContainer.value,
+            roomName: jitsiData.value.room,
+            jwt: jitsiData.value.jwt,
+            width: '100%',
+            height: '100%',
+            configOverwrite: {
+                disableDeepLinking: true,
+                prejoinPageEnabled: false,
+            },
+            interfaceConfigOverwrite: {
+                TOOLBAR_BUTTONS: [
+                    'microphone',
+                    'camera',
+                    'fullscreen',
+                    'chat',
+                    'participants-pane',
+                    'hangup'
+                ],
+                SHOW_JITSI_WATERMARK: false,
+                SHOW_WATERMARK_FOR_GUESTS: false,
+                SHOW_BRAND_WATERMARK: false,
+                DEFAULT_LOGO_URL: '',
+                DEFAULT_WATERMARK_LOGO: '',
+            },
+        })
+
+        error.value = ''
+    } catch (e) {
+        console.error('Error mounting Jitsi', e)
+        error.value = 'No se pudo montar la videollamada.'
+    }
+}
+
 const loadJitsi = async () => {
     try {
         const { data } = await api.get(`/api/video-consultas/medico/${props.accessToken}/join`)
 
         if (data?.ok) {
-            const domain = data.data.domain
-            const room = data.data.room
-            const jwt = data.data.jwt
-            jitsiUrl.value = `https://${domain}/${room}?jwt=${jwt}`
+            jitsiData.value = {
+                domain: data.data.domain,
+                room: data.data.room,
+                jwt: data.data.jwt,
+            }
+
+            await mountJitsi()
             error.value = ''
         }
     } catch (e) {
         console.error('Error cargando Jitsi', e)
-        jitsiUrl.value = null
+        destroyJitsi()
         error.value = e.response?.data?.error || 'No se pudo iniciar la videollamada.'
     }
 }
@@ -64,11 +160,22 @@ const admitir = async () => {
 const finalizar = async () => {
     try {
         await api.post(`/api/video-consultas/${consulta.value.id}/finalizar`)
-        jitsiUrl.value = null
+        destroyJitsi()
         await loadConsulta()
     } catch (e) {
         console.error(e)
         error.value = 'No se pudo finalizar la consulta.'
+    }
+}
+
+const cancelar = async () => {
+    try {
+        await api.post(`/api/video-consultas/${consulta.value.id}/cancelar`)
+        destroyJitsi()
+        await loadConsulta()
+    } catch (e) {
+        console.error(e)
+        error.value = 'No se pudo cancelar la consulta.'
     }
 }
 
@@ -77,26 +184,15 @@ const mostrarBloqueFinal = computed(() => {
     return ['finalizada', 'cancelada', 'vencida', 'incompleta_paciente', 'incompleta_medico'].includes(consulta.value.estado)
 })
 
-const cancelar = async () => {
-    try {
-        await api.post(`/api/video-consultas/${consulta.value.id}/cancelar`)
-        jitsiUrl.value = null
-        await loadConsulta()
-    } catch (e) {
-        console.error(e)
-        error.value = 'No se pudo cancelar la consulta.'
-    }
-}
-
 watch(
     () => consulta.value?.estado,
     async (nuevoEstado) => {
-        if (nuevoEstado === 'en_consulta' && !jitsiUrl.value) {
-            await loadJitsi()
-        }
-
-        if (nuevoEstado !== 'en_consulta') {
-            jitsiUrl.value = null
+        if (nuevoEstado === 'en_consulta') {
+            if (!jitsiApi) {
+                await loadJitsi()
+            }
+        } else {
+            destroyJitsi()
         }
     }
 )
@@ -113,6 +209,7 @@ onMounted(async () => {
 
 onBeforeUnmount(() => {
     if (interval) clearInterval(interval)
+    destroyJitsi()
 })
 </script>
 
@@ -182,12 +279,11 @@ onBeforeUnmount(() => {
         </div>
 
         <div class="flex-1 bg-black">
-            <iframe
-                v-if="consulta?.estado === 'en_consulta' && jitsiUrl"
-                :src="jitsiUrl"
-                class="w-full h-full border-0"
-                allow="camera; microphone; fullscreen; display-capture"
-            />
+            <div
+                v-if="consulta?.estado === 'en_consulta'"
+                ref="jitsiContainer"
+                class="w-full h-full"
+            ></div>
 
             <div v-else class="h-full flex items-center justify-center text-white">
                 <p>La videollamada aún no está activa</p>

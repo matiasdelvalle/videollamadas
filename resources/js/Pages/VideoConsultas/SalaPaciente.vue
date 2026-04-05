@@ -1,7 +1,7 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { api } from '@/lib/api'
-import { DateFormat } from '@/lib/dateUtils';
+import { DateFormat } from '@/lib/dateUtils'
 import EstadoPaciente from '@/Components/VideoConsulta/EstadoPaciente.vue'
 
 const props = defineProps({
@@ -18,9 +18,16 @@ const props = defineProps({
 const loading = ref(true)
 const error = ref('')
 const consulta = ref(null)
-const jitsiUrl = ref(null)
+
+const jitsiContainer = ref(null)
+const jitsiData = ref({
+    domain: null,
+    room: null,
+    jwt: null,
+})
 
 let poller = null
+let jitsiApi = null
 
 const fetchConsulta = async () => {
     try {
@@ -55,20 +62,108 @@ const reintentarConexion = async () => {
     }
 }
 
+const loadJitsiScript = () => {
+    return new Promise((resolve, reject) => {
+        if (window.JitsiMeetExternalAPI) {
+            return resolve()
+        }
+
+        const existing = document.querySelector('script[data-jitsi-api="1"]')
+        if (existing) {
+            existing.addEventListener('load', resolve)
+            existing.addEventListener('error', reject)
+            return
+        }
+
+        const script = document.createElement('script')
+        script.src = 'https://meet.jit.si/external_api.js'
+        script.dataset.jitsiApi = '1'
+        script.onload = resolve
+        script.onerror = reject
+        document.body.appendChild(script)
+    })
+}
+
+const destroyJitsi = () => {
+    if (jitsiApi) {
+        try {
+            jitsiApi.dispose()
+        } catch (e) {
+            console.error('Error disposing Jitsi', e)
+        }
+        jitsiApi = null
+    }
+
+    jitsiData.value = {
+        domain: null,
+        room: null,
+        jwt: null,
+    }
+
+    if (jitsiContainer.value) {
+        jitsiContainer.value.innerHTML = ''
+    }
+}
+
+const mountJitsi = async () => {
+    if (!jitsiContainer.value) return
+    if (!jitsiData.value.domain || !jitsiData.value.room || !jitsiData.value.jwt) return
+    if (jitsiApi) return
+
+    try {
+        await loadJitsiScript()
+
+        jitsiApi = new window.JitsiMeetExternalAPI(jitsiData.value.domain, {
+            parentNode: jitsiContainer.value,
+            roomName: jitsiData.value.room,
+            jwt: jitsiData.value.jwt,
+            width: '100%',
+            height: '100%',
+            configOverwrite: {
+                disableDeepLinking: true,
+                prejoinPageEnabled: false,
+            },
+            interfaceConfigOverwrite: {
+                TOOLBAR_BUTTONS: [
+                    'microphone',
+                    'camera',
+                    'fullscreen',
+                    'chat',
+                    'participants-pane',
+                    'hangup'
+                ],
+                SHOW_JITSI_WATERMARK: false,
+                SHOW_WATERMARK_FOR_GUESTS: false,
+                SHOW_BRAND_WATERMARK: false,
+                DEFAULT_LOGO_URL: '',
+                DEFAULT_WATERMARK_LOGO: '',
+            },
+        })
+
+        error.value = ''
+    } catch (e) {
+        console.error('Error mounting Jitsi', e)
+        error.value = 'No se pudo montar la videollamada.'
+    }
+}
+
 const loadJitsi = async () => {
     try {
         const { data } = await api.get(`/api/video-consultas/paciente/${props.accessToken}/join`)
 
         if (data?.ok) {
-            const domain = data.data.domain
-            const room = data.data.room
-            const jwt = data.data.jwt
-            jitsiUrl.value = `https://${domain}/${room}?jwt=${jwt}#config.disableDeepLinking=true&config.prejoinPageEnabled=false`
+            jitsiData.value = {
+                domain: data.data.domain,
+                room: data.data.room,
+                jwt: data.data.jwt,
+            }
+
+            await mountJitsi()
             error.value = ''
         }
     } catch (e) {
         console.error(e)
-        jitsiUrl.value = null
+        destroyJitsi()
         error.value = e.response?.data?.error || 'No se pudo iniciar la videollamada.'
     }
 }
@@ -140,9 +235,9 @@ const mostrarBotonReintentar = computed(() => {
     return ['activa', 'en_espera'].includes(consulta.value.estado)
 })
 
-const mostrarIframe = computed(() => {
+const mostrarJitsi = computed(() => {
     if (!consulta.value) return false
-    return consulta.value.estado === 'en_consulta' && !!jitsiUrl.value
+    return consulta.value.estado === 'en_consulta'
 })
 
 const mostrarBloqueFinal = computed(() => {
@@ -153,12 +248,12 @@ const mostrarBloqueFinal = computed(() => {
 watch(
     () => consulta.value?.estado,
     async (nuevoEstado) => {
-        if (nuevoEstado === 'en_consulta' && !jitsiUrl.value) {
-            await loadJitsi()
-        }
-
-        if (nuevoEstado !== 'en_consulta') {
-            jitsiUrl.value = null
+        if (nuevoEstado === 'en_consulta') {
+            if (!jitsiApi) {
+                await loadJitsi()
+            }
+        } else {
+            destroyJitsi()
         }
     }
 )
@@ -179,6 +274,7 @@ onMounted(async () => {
 
 onBeforeUnmount(() => {
     if (poller) clearInterval(poller)
+    destroyJitsi()
 })
 </script>
 
@@ -193,47 +289,51 @@ onBeforeUnmount(() => {
                 <div class="text-red-600">{{ error }}</div>
             </div>
 
-            <div v-else class="space-y-6">
-
+            <div v-else>
                 <div class="rounded-3xl bg-white p-8">
                     <div class="text-center gap-4">
                         <div>
                             <h1 class="text-2xl font-bold text-slate-800 md:text-3xl">{{ titulo }}</h1>
-                            <p class="mt-2 text-sm text-slate-500 ">{{ subtitulo }}</p>
+                            <p class="mt-2 text-sm text-slate-500">{{ subtitulo }}</p>
                         </div>
                     </div>
 
                     <div class="flex items-center justify-center py-4 w-full">
-                        <EstadoPaciente :estado="consulta.estado" :paciente-conectado="!!consulta.paciente_conectado" />
+                        <EstadoPaciente
+                            :estado="consulta.estado"
+                            :paciente-conectado="!!consulta.paciente_conectado"
+                        />
                     </div>
 
-                    <div v-if="error" class="mt-6 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">{{ error }}</div>
+                    <div v-if="error" class="mt-6 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+                        {{ error }}
+                    </div>
 
-                    <div class="">
-                        <div class="text-center p-4">
-                            <div class="mt-1 font-semibold text-slate-800">
+                    <div class="flex justify-between">
+                        <div class="text-left">
+                            <div class="font-semibold text-slate-800">
                                 {{ consulta.medico_nombre || '-' }}
                             </div>
-                            <div class="mt-1 font-semibold text-slate-800">
-                                {{ consulta.especialidad || '-' }}
-                            </div>
                         </div>
-                        
-                        <div class="p-4 flex justify-between">
-                            <div class="mt-1 font-semibold text-slate-800 px-4">
-                                {{  consulta.inicio_programado ? DateFormat(consulta.inicio_programado, 'DD-MM-YYYY') : '-' }}
-                            </div>
-                            <div class="mt-1 font-semibold text-slate-800 px-4">
-                                {{  consulta.inicio_programado ? DateFormat(consulta.inicio_programado, 'HH:mm:ss') : '-' }}
+
+                        <div class="p-4 text-right">
+                            <div class="font-semibold text-slate-800 ">
+                                {{ consulta.inicio_programado ? DateFormat(consulta.inicio_programado, 'DD-MM-YYYY HH:mm:ss') : '-' }}
                             </div>
                         </div>
                     </div>
 
-                    <div v-if="consulta.estado === 'inactiva'" class="mt-6 rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-800">
+                    <div
+                        v-if="consulta.estado === 'inactiva'"
+                        class="mt-6 rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-800"
+                    >
                         La sala fue creada pero todavía no está habilitada.
                     </div>
 
-                    <div v-if="['activa', 'en_espera'].includes(consulta.estado)" class="mt-6 rounded-2xl border border-yellow-200 bg-yellow-50 p-4 text-sm text-yellow-800">
+                    <div
+                        v-if="['activa', 'en_espera'].includes(consulta.estado)"
+                        class="mt-6 rounded-2xl border border-yellow-200 bg-yellow-50 p-4 text-sm text-yellow-800"
+                    >
                         Usted puede permanecer en espera hasta que el profesional le dé ingreso.
                     </div>
 
@@ -241,7 +341,7 @@ onBeforeUnmount(() => {
                         La consulta ya no se encuentra activa.
                     </div>
 
-                    <div class="mt-8 flex flex-col gap-3 sm:flex-row">
+                    <div class="flex flex-col gap-3 sm:flex-row">
                         <button
                             v-if="mostrarBotonConectar"
                             type="button"
@@ -262,11 +362,15 @@ onBeforeUnmount(() => {
                     </div>
                 </div>
 
-                <div v-if="mostrarIframe" class="overflow-hidden rounded-3xl bg-white p-3 shadow-sm">
+                <div v-if="mostrarJitsi" class="overflow-hidden rounded-3xl bg-white shadow-sm">
                     <div class="mb-3 px-2 text-sm font-medium text-slate-600">
                         Consulta activa
                     </div>
-                    <iframe :src="jitsiUrl" class="h-[70vh] w-full rounded-2xl border border-slate-200" allow="camera; microphone; fullscreen; display-capture"/>
+
+                    <div
+                        ref="jitsiContainer"
+                        class="h-[70vh] w-full rounded-2xl border border-slate-200 overflow-hidden"
+                    ></div>
                 </div>
             </div>
         </div>
