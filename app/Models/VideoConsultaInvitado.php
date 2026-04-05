@@ -21,8 +21,7 @@ class VideoConsultaInvitado extends Model
         'ultimo_envio_at' => 'datetime',
     ];
 
-    public function videoConsulta()
-    {
+    public function videoConsulta(){
         return $this->belongsTo(VideoConsulta::class, 'video_consulta_id');
     }
 }

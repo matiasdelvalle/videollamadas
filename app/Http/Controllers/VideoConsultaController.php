@@ -104,7 +104,6 @@ class VideoConsultaController extends Controller
 
     public function invitado($token){
         $invitado = VideoConsultaInvitado::where('token', $token)->firstOrFail();
-
         return inertia('VideoConsultas/SalaInvitado', [
             'invitadoId' => $invitado->id,
             'accessToken' => $token,
