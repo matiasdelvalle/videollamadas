@@ -63,7 +63,7 @@ const loadJitsi = async () => {
             const domain = data.data.domain
             const room = data.data.room
             const jwt = data.data.jwt
-            jitsiUrl.value = `https://${domain}/${room}?jwt=${jwt}`
+            jitsiUrl.value = `https://${domain}/${room}?jwt=${jwt}#config.disableDeepLinking=true&config.prejoinPageEnabled=false`
             error.value = ''
         }
     } catch (e) {
