@@ -73,7 +73,10 @@ const loadJitsiScript = (domain) => {
         }
 
         const script = document.createElement('script')
-        script.src = `https://${domain}/external_api.js`
+        // script.src = `https://${domain}/external_api.js`
+
+        script.src = "https://meet.jit.si/external_api.js"
+
         script.dataset.jitsiApi = '1'
         script.onload = resolve
         script.onerror = reject
@@ -155,11 +158,9 @@ const mountJitsi = async () => {
                 } catch (e) {
                     console.error('No se pudo activar lobby', e)
                 }
-
                 await informarMedicoConectado()
             }
         })
-
         error.value = ''
     } catch (e) {
         console.error('Error mounting Jitsi', e)
@@ -170,14 +171,12 @@ const mountJitsi = async () => {
 const loadJitsi = async () => {
     try {
         const { data } = await api.get(`/api/video-consultas/medico/${props.accessToken}/join`)
-
         if (data?.ok) {
             jitsiData.value = {
                 domain: data.data.domain,
                 room: data.data.room,
                 jwt: data.data.jwt,
             }
-
             await mountJitsi()
             error.value = ''
         }
@@ -444,7 +443,6 @@ onBeforeUnmount(() => {
                     </h3>
 
                     <ul class="space-y-2 text-sm text-slate-700">
-                        <li>• Tiempo en la sala: {{ tiempoSala }}</li>
                         <li>• Micrófono: Activo</li>
                         <li>• Cámara: Activa</li>
                         <li>• Estado: {{ consulta.estado }}</li>
