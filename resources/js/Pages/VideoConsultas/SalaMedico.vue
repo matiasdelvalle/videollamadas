@@ -29,9 +29,9 @@ const jitsiData = ref({
 const invitadoEmail = ref('')
 const invitados = ref([])
 const invitando = ref(false)
+const jitsiApi = ref(null)
 
 let interval = null
-let jitsiApi = null
 let medicoConectadoInformado = false
 
 const loadConsulta = async () => {
@@ -82,13 +82,13 @@ const loadJitsiScript = (domain) => {
 }
 
 const destroyJitsi = () => {
-    if (jitsiApi) {
+    if (jitsiApi.value) {
         try {
-            jitsiApi.dispose()
+            jitsiApi.value.dispose()
         } catch (e) {
             console.error('Error disposing Jitsi', e)
         }
-        jitsiApi = null
+        jitsiApi.value = null
     }
 
     medicoConectadoInformado = false
@@ -107,12 +107,12 @@ const destroyJitsi = () => {
 const mountJitsi = async () => {
     if (!jitsiContainer.value) return
     if (!jitsiData.value.domain || !jitsiData.value.room || !jitsiData.value.jwt) return
-    if (jitsiApi) return
+    if (jitsiApi.value) return
 
     try {
         await loadJitsiScript(jitsiData.value.domain)
 
-        jitsiApi = new window.JitsiMeetExternalAPI(jitsiData.value.domain, {
+        jitsiApi.value = new window.JitsiMeetExternalAPI(jitsiData.value.domain, {
             parentNode: jitsiContainer.value,
             roomName: jitsiData.value.room,
             jwt: jitsiData.value.jwt,
@@ -144,14 +144,14 @@ const mountJitsi = async () => {
             },
         })
 
-        jitsiApi.addEventListener('videoConferenceJoined', async () => {
+        jitsiApi.value.addEventListener('videoConferenceJoined', async () => {
             await informarMedicoConectado()
         })
 
-        jitsiApi.addEventListener('participantRoleChanged', async (event) => {
+        jitsiApi.value.addEventListener('participantRoleChanged', async (event) => {
             if (event?.role === 'moderator') {
                 try {
-                    jitsiApi.executeCommand('toggleLobby', true)
+                    jitsiApi.value.executeCommand('toggleLobby', true)
                 } catch (e) {
                     console.error('No se pudo activar lobby', e)
                 }
@@ -312,7 +312,7 @@ const esperaActiva = computed(() => {
 })
 
 const jitsiActivo = computed(() => {
-    return !!jitsiApi && consulta.value?.estado === 'en_consulta'
+    return !!jitsiApi.value && consulta.value?.estado === 'en_consulta'
 })
 
 const mostrarPanelInicial = computed(() => {
@@ -338,11 +338,9 @@ const accionPrincipal = async () => {
     }
 }
 
-watch(
-    () => consulta.value?.estado,
-    async (nuevoEstado) => {
+watch( () => consulta.value?.estado, async (nuevoEstado) => {
         if (nuevoEstado === 'en_consulta') {
-            if (!jitsiApi) {
+            if (!jitsiApi.value) {
                 await loadJitsi()
             }
         } else {

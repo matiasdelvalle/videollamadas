@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, onBeforeUnmount } from 'vue'
+import { ref, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { api } from '@/lib/api'
 
 const props = defineProps({
@@ -54,7 +54,7 @@ const destroyJitsi = () => {
 }
 
 const mountJitsi = async () => {
-    if (!jitsiData.value.domain) return
+    if (!jitsiData.value.domain || !jitsiContainer.value) return
 
     await loadJitsiScript(jitsiData.value.domain)
 
@@ -65,7 +65,11 @@ const mountJitsi = async () => {
         width: '100%',
         height: '100%',
         configOverwrite: {
+            disableDeepLinking: true,
             prejoinPageEnabled: false,
+            prejoinConfig: {
+                enabled: false,
+            },
             startWithAudioMuted: true,
             startWithVideoMuted: true,
         },
@@ -79,8 +83,6 @@ const mountJitsi = async () => {
             ],
         },
     })
-
-    waiting.value = false
 }
 
 const tryJoin = async () => {
@@ -89,14 +91,18 @@ const tryJoin = async () => {
 
         if (data?.ok) {
             jitsiData.value = data.data
-            await mountJitsi()
-            error.value = ''
+
             loading.value = false
+            waiting.value = false
+            error.value = ''
+
+            await nextTick()
+            await mountJitsi()
         }
     } catch (e) {
         loading.value = false
         waiting.value = true
-        error.value = '' // no mostramos error, seguimos esperando
+        error.value = ''
     }
 }
 
@@ -119,13 +125,10 @@ onBeforeUnmount(() => {
 <template>
     <div class="min-h-screen bg-slate-100 flex items-center justify-center p-4">
         <div class="w-full max-w-md space-y-4">
-
-            <!-- Loading -->
             <div v-if="loading" class="bg-white p-6 rounded-xl shadow text-center text-slate-500">
                 Conectando...
             </div>
 
-            <!-- Waiting -->
             <div v-else-if="waiting" class="bg-white p-6 rounded-xl shadow text-center">
                 <h2 class="text-lg font-semibold text-blue-700 mb-2">
                     Sala de espera
@@ -140,14 +143,12 @@ onBeforeUnmount(() => {
                 </p>
             </div>
 
-            <!-- Jitsi -->
             <div v-else class="bg-white p-2 rounded-xl shadow">
                 <div
                     ref="jitsiContainer"
                     class="w-full h-[500px] rounded-xl overflow-hidden border"
                 ></div>
             </div>
-
         </div>
     </div>
 </template>
