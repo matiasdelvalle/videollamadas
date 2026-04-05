@@ -1,6 +1,7 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { api } from '@/lib/api'
+import { DateFormat } from '@/lib/dateUtils';
 import EstadoPaciente from '@/Components/VideoConsulta/EstadoPaciente.vue'
 
 const props = defineProps({
@@ -107,7 +108,7 @@ const subtitulo = computed(() => {
     }
 
     if (estado === 'finalizada') {
-        return 'La atención terminó correctamente.'
+        return 'Gracias por utilizar nuestro servicio.'
     }
 
     if (estado === 'vencida') {
@@ -182,7 +183,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-    <div class="min-h-screen bg-slate-100 p-4 md:p-6">
+    <div class="min-h-screen p-4 md:p-6">
         <div class="mx-auto max-w-4xl">
             <div v-if="loading" class="rounded-3xl bg-white p-8 shadow-sm">
                 <div class="text-slate-500">Cargando consulta...</div>
@@ -193,69 +194,50 @@ onBeforeUnmount(() => {
             </div>
 
             <div v-else class="space-y-6">
-                <div class="rounded-3xl bg-white p-8 shadow-sm">
-                    <div class="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+
+                <div class="rounded-3xl bg-white p-8">
+                    <div class="text-center gap-4">
                         <div>
-                            <h1 class="text-2xl font-bold text-slate-800 md:text-3xl">
-                                {{ titulo }}
-                            </h1>
-
-                            <p class="mt-2 max-w-2xl text-sm text-slate-500 md:text-base">
-                                {{ subtitulo }}
-                            </p>
+                            <h1 class="text-2xl font-bold text-slate-800 md:text-3xl">{{ titulo }}</h1>
+                            <p class="mt-2 text-sm text-slate-500 ">{{ subtitulo }}</p>
                         </div>
-
-                        <EstadoPaciente
-                            :estado="consulta.estado"
-                            :paciente-conectado="!!consulta.paciente_conectado"
-                        />
                     </div>
 
-                    <div v-if="error" class="mt-6 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-                        {{ error }}
+                    <div class="flex items-center justify-center py-4 w-full">
+                        <EstadoPaciente :estado="consulta.estado" :paciente-conectado="!!consulta.paciente_conectado" />
                     </div>
 
-                    <div class="mt-8 grid gap-4 md:grid-cols-3">
-                        <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                            <div class="text-sm text-slate-400">Médico</div>
+                    <div v-if="error" class="mt-6 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">{{ error }}</div>
+
+                    <div class="">
+                        <div class="text-center p-4">
                             <div class="mt-1 font-semibold text-slate-800">
                                 {{ consulta.medico_nombre || '-' }}
                             </div>
-                        </div>
-
-                        <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                            <div class="text-sm text-slate-400">Especialidad</div>
                             <div class="mt-1 font-semibold text-slate-800">
                                 {{ consulta.especialidad || '-' }}
                             </div>
                         </div>
-
-                        <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                            <div class="text-sm text-slate-400">Horario</div>
-                            <div class="mt-1 font-semibold text-slate-800">
-                                {{ consulta.inicio_programado || '-' }}
+                        
+                        <div class="p-4 flex justify-between">
+                            <div class="mt-1 font-semibold text-slate-800 px-4">
+                                {{  consulta.inicio_programado ? DateFormat(consulta.inicio_programado, 'DD-MM-YYYY') : '-' }}
+                            </div>
+                            <div class="mt-1 font-semibold text-slate-800 px-4">
+                                {{  consulta.inicio_programado ? DateFormat(consulta.inicio_programado, 'HH:mm:ss') : '-' }}
                             </div>
                         </div>
                     </div>
 
-                    <div
-                        v-if="consulta.estado === 'inactiva'"
-                        class="mt-6 rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-800"
-                    >
+                    <div v-if="consulta.estado === 'inactiva'" class="mt-6 rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-800">
                         La sala fue creada pero todavía no está habilitada.
                     </div>
 
-                    <div
-                        v-if="['activa', 'en_espera'].includes(consulta.estado)"
-                        class="mt-6 rounded-2xl border border-yellow-200 bg-yellow-50 p-4 text-sm text-yellow-800"
-                    >
+                    <div v-if="['activa', 'en_espera'].includes(consulta.estado)" class="mt-6 rounded-2xl border border-yellow-200 bg-yellow-50 p-4 text-sm text-yellow-800">
                         Usted puede permanecer en espera hasta que el profesional le dé ingreso.
                     </div>
 
-                    <div
-                        v-if="mostrarBloqueFinal"
-                        class="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700"
-                    >
+                    <div v-if="mostrarBloqueFinal" class="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
                         La consulta ya no se encuentra activa.
                     </div>
 
@@ -280,19 +262,11 @@ onBeforeUnmount(() => {
                     </div>
                 </div>
 
-                <div
-                    v-if="mostrarIframe"
-                    class="overflow-hidden rounded-3xl bg-white p-3 shadow-sm"
-                >
+                <div v-if="mostrarIframe" class="overflow-hidden rounded-3xl bg-white p-3 shadow-sm">
                     <div class="mb-3 px-2 text-sm font-medium text-slate-600">
                         Consulta activa
                     </div>
-
-                    <iframe
-                        :src="jitsiUrl"
-                        class="h-[70vh] w-full rounded-2xl border border-slate-200"
-                        allow="camera; microphone; fullscreen; display-capture"
-                    />
+                    <iframe :src="jitsiUrl" class="h-[70vh] w-full rounded-2xl border border-slate-200" allow="camera; microphone; fullscreen; display-capture"/>
                 </div>
             </div>
         </div>

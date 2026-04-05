@@ -13,9 +13,9 @@ const props = defineProps({
 })
 
 const label = computed(() => {
-    if (props.estado === 'en_consulta') return '🟢 En consulta'
-    if (props.pacienteConectado || props.estado === 'en_espera') return '🟡 Conectado - en sala de espera'
-    return '🔴 No conectado'
+    if (props.estado === 'en_consulta') return 'En consulta'
+    if (props.pacienteConectado || props.estado === 'en_espera') return 'Conectado - en sala de espera'
+    return 'No conectado'
 })
 
 const clases = computed(() => {
@@ -26,7 +26,7 @@ const clases = computed(() => {
 </script>
 
 <template>
-    <div class="inline-flex rounded-full border px-3 py-1 text-sm font-medium" :class="clases">
+    <div v-if="props.estado !== 'finalizada'" class="inline-flex px-3 py-2 text-sm font-medium items-center justify-center w-full rounded-md" :class="clases">
         {{ label }}
     </div>
 </template>
