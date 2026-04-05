@@ -73,10 +73,7 @@ const loadJitsiScript = (domain) => {
         }
 
         const script = document.createElement('script')
-        // script.src = `https://${domain}/external_api.js`
-
-        script.src = "https://meet.jit.si/external_api.js"
-
+        script.src = `https://${domain}/external_api.js`
         script.dataset.jitsiApi = '1'
         script.onload = resolve
         script.onerror = reject
@@ -158,7 +155,20 @@ const mountJitsi = async () => {
                 } catch (e) {
                     console.error('No se pudo activar lobby', e)
                 }
+
                 await informarMedicoConectado()
+
+                jitsiApi.value.addEventListener('participantJoined', (participant) => {
+                    setTimeout(() => {
+                        try {
+                            if (participant?.id) {
+                                jitsiApi.value.executeCommand('revokeModerator', participant.id)
+                            }
+                        } catch (e) {
+                            console.error('Error quitando moderator', e)
+                        }
+                    }, 1500)
+                })
             }
         })
         error.value = ''
@@ -320,12 +330,14 @@ const mostrarPanelInicial = computed(() => {
 
 const textoBotonPrincipal = computed(() => {
     if (!consulta.value) return 'Ingresar a la Videollamada'
+    if (consulta.value.estado === 'finalizada') return 'Llamada finalizada'
     return 'Ingresar a la Videollamada'
 })
 
 const botonPrincipalDeshabilitado = computed(() => {
     if (!consulta.value) return true
     if (consulta.value.estado === 'en_espera') return false
+    if (consulta.value.estado === 'finalizada') return true
     return !pacienteConectado.value
 })
 
@@ -437,7 +449,7 @@ onBeforeUnmount(() => {
                     </div>
                 </div>
 
-                <div v-if="mostrarPanelInicial" class="rounded-xl bg-white p-5 shadow">
+                <div v-if="mostrarPanelInicial" class="rounded-xl bg-white p-5 shadow hidden">
                     <h3 class="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-500">
                         Detalle de Conexión
                     </h3>

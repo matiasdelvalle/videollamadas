@@ -316,36 +316,23 @@ onBeforeUnmount(() => {
 
                     <div class="flex justify-between">
                         <div class="text-left">
-                            <div class="font-semibold text-slate-800">
-                                {{ consulta.medico_nombre || '-' }}
-                            </div>
+                            <div class="font-semibold text-slate-800"> {{ consulta.medico_nombre || '-' }}</div>
                         </div>
 
-                        <div class="p-4 text-right">
-                            <div class="font-semibold text-slate-800">
-                                {{ consulta.inicio_programado ? DateFormat(consulta.inicio_programado, 'DD-MM-YYYY HH:mm:ss') : '-' }}
-                            </div>
+                        <div class="text-right">
+                            <div class="font-semibold text-slate-800">{{ consulta.inicio_programado ? DateFormat(consulta.inicio_programado, 'DD-MM-YYYY HH:mm:ss') : '-' }}</div>
                         </div>
                     </div>
 
-                    <div
-                        v-if="consulta.estado === 'inactiva'"
-                        class="mt-6 rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-800"
-                    >
+                    <div v-if="consulta.estado === 'inactiva'" class="mt-6 rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-800 text-center">
                         La sala fue creada pero todavía no está habilitada.
                     </div>
 
-                    <div
-                        v-if="['activa', 'en_espera'].includes(consulta.estado)"
-                        class="mt-6 rounded-2xl border border-yellow-200 bg-yellow-50 p-4 text-sm text-yellow-800"
-                    >
+                    <div v-if="['activa', 'en_espera'].includes(consulta.estado)" class="mt-6 mb-1 rounded-2xl border border-yellow-200 bg-yellow-50 p-4 text-sm text-yellow-800 text-center">
                         Usted puede permanecer en espera hasta que el profesional le dé ingreso.
                     </div>
 
-                    <div
-                        v-if="mostrarBloqueFinal"
-                        class="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700"
-                    >
+                    <div v-if="mostrarBloqueFinal" class="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700 text-center">
                         La consulta ya no se encuentra activa.
                     </div>
 

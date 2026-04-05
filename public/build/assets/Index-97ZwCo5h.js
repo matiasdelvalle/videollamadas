@@ -1,0 +1,1 @@
+import{_ as e}from"./_plugin-vue_export-helper-BCo6x5W8.js";import{f as s,b as t,o}from"./app-Dl0gnqvB.js";/* empty css            */const r={class:"min-h-screen bg-slate-100 p-6 font-mono flex justify-center items-center"};const n=e({},[["render",function(e,n){return o(),s("div",r,[...n[0]||(n[0]=[t("h1",{class:"text-3xl"},"VIDEOLLAMADA",-1)])])}]]);export{n as default};
