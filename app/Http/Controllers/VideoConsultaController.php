@@ -165,7 +165,7 @@ class VideoConsultaController extends Controller
             ], 403);
         }
 
-        $jwt = $this->generarToken($consulta->room_name, 'Medico');
+        $jwt = $this->generarToken($consulta->room_name, 'Medico', true);
 
         return response()->json([
             'ok' => true,
@@ -204,7 +204,7 @@ class VideoConsultaController extends Controller
             ], 409);
         }
 
-        $jwt = $this->generarToken($consulta->room_name, 'Paciente');
+        $jwt = $this->generarToken($consulta->room_name, 'Paciente', false);
 
         return response()->json([
             'ok' => true,
@@ -234,7 +234,7 @@ class VideoConsultaController extends Controller
             ], 409);
         }
 
-        $jwt = $this->generarToken($consulta->room_name, $invitado->nombre ?: 'Invitado');
+        $jwt = $this->generarToken($consulta->room_name, $invitado->nombre ?: 'Invitado', false);
 
         return response()->json([
             'ok' => true,
@@ -246,7 +246,7 @@ class VideoConsultaController extends Controller
         ]);
     }
 
-    private function generarToken($room, $nombre){
+    private function generarToken($room, $nombre, $esModerador = false){
         $domain = parse_url(config('services.jitsi.url'), PHP_URL_HOST);
         $appId = config('services.jitsi.app_id');
         $secret = config('services.jitsi.secret');
@@ -263,6 +263,7 @@ class VideoConsultaController extends Controller
                 'user' => [
                     'name' => $nombre ?: 'Invitado',
                     'email' => null,
+                    'moderator' => $esModerador,
                 ],
             ],
         ];
