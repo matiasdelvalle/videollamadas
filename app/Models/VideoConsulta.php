@@ -35,4 +35,8 @@ class VideoConsulta extends Model
     public function medico(){
         return $this->belongsTo(User::class, 'medico_id');
     }
+
+    public function invitados(){
+        return $this->hasMany(VideoConsultaInvitado::class, 'video_consulta_id');
+    }
 }

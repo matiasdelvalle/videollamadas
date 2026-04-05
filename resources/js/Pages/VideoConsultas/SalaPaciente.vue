@@ -62,7 +62,7 @@ const reintentarConexion = async () => {
     }
 }
 
-const loadJitsiScript = () => {
+const loadJitsiScript = (domain) => {
     return new Promise((resolve, reject) => {
         if (window.JitsiMeetExternalAPI) {
             return resolve()
@@ -76,7 +76,7 @@ const loadJitsiScript = () => {
         }
 
         const script = document.createElement('script')
-        script.src = 'https://meet.jit.si/external_api.js'
+        script.src = `https://${domain}/external_api.js`
         script.dataset.jitsiApi = '1'
         script.onload = resolve
         script.onerror = reject
@@ -111,7 +111,7 @@ const mountJitsi = async () => {
     if (jitsiApi) return
 
     try {
-        await loadJitsiScript()
+        await loadJitsiScript(jitsiData.value.domain)
 
         jitsiApi = new window.JitsiMeetExternalAPI(jitsiData.value.domain, {
             parentNode: jitsiContainer.value,
@@ -122,6 +122,11 @@ const mountJitsi = async () => {
             configOverwrite: {
                 disableDeepLinking: true,
                 prejoinPageEnabled: false,
+                prejoinConfig: {
+                    enabled: false,
+                },
+                startWithAudioMuted: true,
+                startWithVideoMuted: true,
             },
             interfaceConfigOverwrite: {
                 TOOLBAR_BUTTONS: [
@@ -317,7 +322,7 @@ onBeforeUnmount(() => {
                         </div>
 
                         <div class="p-4 text-right">
-                            <div class="font-semibold text-slate-800 ">
+                            <div class="font-semibold text-slate-800">
                                 {{ consulta.inicio_programado ? DateFormat(consulta.inicio_programado, 'DD-MM-YYYY HH:mm:ss') : '-' }}
                             </div>
                         </div>
@@ -337,7 +342,10 @@ onBeforeUnmount(() => {
                         Usted puede permanecer en espera hasta que el profesional le dé ingreso.
                     </div>
 
-                    <div v-if="mostrarBloqueFinal" class="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
+                    <div
+                        v-if="mostrarBloqueFinal"
+                        class="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700"
+                    >
                         La consulta ya no se encuentra activa.
                     </div>
 
