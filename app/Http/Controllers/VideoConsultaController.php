@@ -251,7 +251,6 @@ class VideoConsultaController extends Controller
         $appId = config('services.jitsi.app_id');
         $secret = config('services.jitsi.secret');
         $now = time();
-
         $payload = [
             'aud' => 'jitsi',
             'iss' => $appId,
@@ -263,16 +262,13 @@ class VideoConsultaController extends Controller
                 'user' => [
                     'name' => $nombre ?: 'Invitado',
                     'email' => null,
-                    // 👇 CLAVE
                     'affiliation' => $esModerador ? 'owner' : 'member',
                 ],
-                // 👇 también ayuda en algunos setups
                 'features' => [
                     'moderator' => $esModerador,
                 ],
             ],
         ];
-
         return JWT::encode($payload, $secret, 'HS256');
     }
 
