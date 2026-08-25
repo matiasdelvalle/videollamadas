@@ -283,6 +283,14 @@ const eliminarInvitado = async (invitado) => {
     }
 }
 
+const estadoInvitadoLabel = (invitado) => {
+    if (!invitado?.estado || ['pendiente', 'enlace_enviado'].includes(invitado.estado)) {
+        return 'Enlace enviado'
+    }
+
+    return invitado.estado.replaceAll('_', ' ')
+}
+
 const mostrarBloqueFinal = computed(() => {
     if (!consulta.value) return false
     return ['finalizada', 'cancelada', 'vencida', 'incompleta_paciente', 'incompleta_medico'].includes(consulta.value.estado)
@@ -380,13 +388,13 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-    <div class="min-h-screen bg-slate-100 p-4 md:p-6">
-        <div class="mx-auto max-w-md space-y-4">
-            <div class="rounded-t-xl bg-blue-800 px-4 py-3 text-center text-white shadow">
-                <h1 class="text-lg font-semibold">Videoconsulta Médica</h1>
+    <div class="min-h-screen bg-slate-100 p-2 md:p-3">
+        <div class="mx-auto max-w-md space-y-2">
+            <div class="rounded-t-xl bg-blue-800 px-3 py-2 text-center text-white shadow">
+                <h1 class="text-base font-semibold">Videoconsulta Médica</h1>
             </div>
 
-            <div v-if="loading" class="rounded-xl bg-white p-6 shadow">
+            <div v-if="loading" class="rounded-xl bg-white p-4 shadow">
                 <div class="text-slate-500">Cargando consulta...</div>
             </div>
 
@@ -395,23 +403,24 @@ onBeforeUnmount(() => {
             </div>
 
             <template v-else-if="consulta">
-                <div v-if="mostrarPanelInicial" class="rounded-xl bg-blue-50 p-4 shadow">
-                    <h2 class="mb-4 text-center text-2xl font-semibold text-blue-700">Sala de espera</h2>
+                <div v-if="mostrarPanelInicial" class="rounded-xl bg-blue-50 p-3 shadow">
+                    <h2 class="mb-2 text-center text-xl font-semibold text-blue-700">Sala de espera</h2>
 
                     <div
-                        class="mb-4 rounded-lg border p-4 text-center"
+                        v-if="!mostrarBloqueFinal"
+                        class="mb-2 rounded-lg border px-3 py-2 text-center"
                         :class="estadoPacienteClase"
                     >
                         <div class="font-semibold">{{ estadoPacienteTitulo }}</div>
                         <div class="text-sm">{{ estadoPacienteTexto }}</div>
                     </div>
 
-                    <div class="rounded-xl bg-white p-5 shadow-sm">
-                        <div class="mb-4 text-center text-2xl font-semibold text-blue-700">
+                    <div class="rounded-xl bg-white p-3 shadow-sm">
+                        <div class="mb-2 text-center text-xl font-semibold text-blue-700">
                             {{ consulta.medico_nombre || 'Profesional' }}
                         </div>
 
-                        <div class="mb-4 flex items-center justify-center gap-6 text-blue-500">
+                        <div class="mb-2 flex items-center justify-center gap-4 text-sm text-blue-500">
                             <div class="font-medium text-slate-700">
                                 {{ consulta.inicio_programado ? DateFormat(consulta.inicio_programado, 'DD/MM/YYYY') : '-' }}
                             </div>
@@ -422,7 +431,7 @@ onBeforeUnmount(() => {
 
                         <button
                             type="button"
-                            class="mb-4 w-full rounded-full px-5 py-3 text-sm font-semibold transition"
+                            class="mb-2 w-full rounded-full px-4 py-2 text-sm font-semibold transition"
                             :disabled="botonPrincipalDeshabilitado"
                             :class="botonPrincipalDeshabilitado
                                 ? 'cursor-not-allowed bg-slate-300 text-slate-100'
@@ -432,11 +441,11 @@ onBeforeUnmount(() => {
                             {{ textoBotonPrincipal }}
                         </button>
 
-                        <div class="mb-2 text-center text-sm font-semibold text-slate-700">
+                        <div class="mb-1 break-all text-center text-xs font-semibold text-slate-700">
                             ID Sala: {{ roomLabel }}
                         </div>
 
-                        <div class="text-center text-sm text-slate-500">
+                        <div class="text-center text-xs leading-4 text-slate-500">
                             <template v-if="!pacienteConectado">
                                 El botón se habilitará cuando el paciente esté conectado.<br>
                                 Podrá iniciar igualmente al iniciarse el turno.
@@ -481,72 +490,74 @@ onBeforeUnmount(() => {
 
                 <div
                     v-if="consulta.estado === 'en_consulta'"
-                    class="overflow-hidden rounded-xl bg-white p-3 shadow"
+                    class="overflow-hidden rounded-xl bg-white p-2 shadow"
                 >
                     <div
                         ref="jitsiContainer"
-                        class="h-[420px] w-full overflow-hidden rounded-xl border border-slate-200"
+                        class="h-[55vh] min-h-[320px] max-h-[480px] w-full overflow-hidden rounded-xl border border-slate-200"
                     ></div>
                 </div>
 
-                <div v-if="consulta.estado === 'en_consulta'" class="rounded-xl bg-white p-4 shadow">
+                <div v-if="consulta.estado === 'en_consulta'" class="rounded-xl bg-white p-3 shadow">
                     <button
                         type="button"
-                        class="w-full rounded-full bg-red-600 px-5 py-3 text-sm font-semibold text-white hover:bg-red-700"
+                        class="w-full rounded-full bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700"
                         @click="finalizar"
                     >
                         Finalizar consulta
                     </button>
                 </div>
 
-                <div class="rounded-t-xl bg-blue-800 px-4 py-3 text-center text-white shadow">
-                    <h3 class="font-semibold">Invitar a terceros</h3>
-                </div>
-
-                <div class="rounded-xl bg-white p-4 shadow">
-                    <div class="mb-3 flex gap-2">
-                        <input
-                            v-model="invitadoEmail"
-                            type="email"
-                            placeholder="Email invitado"
-                            class="flex-1 rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500"
-                            @keyup.enter="agregarInvitado"
-                        >
-                        <button
-                            type="button"
-                            class="rounded-md bg-blue-700 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-800 disabled:opacity-50"
-                            :disabled="invitando"
-                            @click="agregarInvitado"
-                        >
-                            {{ invitando ? 'Enviando...' : 'Agregar' }}
-                        </button>
+                <template v-if="!mostrarBloqueFinal">
+                    <div class="rounded-t-xl bg-blue-800 px-3 py-2 text-center text-white shadow">
+                        <h3 class="font-semibold">Invitar a terceros</h3>
                     </div>
 
-                    <div class="space-y-2">
-                        <div
-                            v-for="invitado in invitados"
-                            :key="invitado.id || invitado.email"
-                            class="flex items-center justify-between rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700"
-                        >
-                            <div class="flex flex-col">
-                                <span>{{ invitado.email }}</span>
-                                <span class="text-xs text-slate-400">{{ invitado.estado || 'pendiente' }}</span>
-                            </div>
-
+                    <div class="rounded-xl bg-white p-3 shadow">
+                        <div class="mb-2 flex gap-2">
+                            <input
+                                v-model="invitadoEmail"
+                                type="email"
+                                placeholder="Email invitado"
+                                class="min-w-0 flex-1 rounded-md border border-slate-300 px-3 py-1.5 text-sm outline-none focus:border-blue-500"
+                                @keyup.enter="agregarInvitado"
+                            >
                             <button
                                 type="button"
-                                class="text-slate-400 hover:text-red-500"
-                                @click="eliminarInvitado(invitado)"
+                                class="rounded-md bg-blue-700 px-3 py-1.5 text-sm font-semibold text-white hover:bg-blue-800 disabled:opacity-50"
+                                :disabled="invitando"
+                                @click="agregarInvitado"
                             >
-                                ×
+                                {{ invitando ? 'Enviando...' : 'Agregar' }}
                             </button>
                         </div>
-                    </div>
 
-                    <p class="mt-4 text-xs text-slate-500">
-                        Al agregar un invitado se envía automáticamente el mail con el acceso.
-                    </p>
-                </div>
+                        <div class="space-y-2">
+                            <div
+                                v-for="invitado in invitados"
+                                :key="invitado.id || invitado.email"
+                                class="flex items-center justify-between rounded-md border border-slate-200 bg-slate-50 px-3 py-1.5 text-sm text-slate-700"
+                            >
+                                <div class="flex flex-col">
+                                    <span>{{ invitado.email }}</span>
+                                    <span class="text-xs text-slate-400">{{ estadoInvitadoLabel(invitado) }}</span>
+                                </div>
+
+                                <button
+                                    type="button"
+                                    class="text-slate-400 hover:text-red-500"
+                                    @click="eliminarInvitado(invitado)"
+                                >
+                                    ×
+                                </button>
+                            </div>
+                        </div>
+
+                        <p class="mt-2 text-xs leading-4 text-slate-500">
+                            Al agregar un invitado se envía automáticamente el mail con el acceso.
+                        </p>
+                    </div>
+                </template>
 
                 <div v-if="error && consulta" class="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700 shadow">
                     {{ error }}

@@ -151,10 +151,6 @@ class VideoConsultaController extends Controller
         return response()->json(['ok' => true]);
     }
 
-    public function reintentar($id){
-        return response()->json(['ok' => true]);
-    }
-
     public function joinMedico($token){
         $consulta = VideoConsulta::where('token_medico', $token)->firstOrFail();
 
@@ -294,12 +290,19 @@ class VideoConsultaController extends Controller
 
         $consulta = VideoConsulta::findOrFail($id);
 
+        if (in_array($consulta->estado, ['finalizada', 'cancelada', 'vencida', 'incompleta_paciente', 'incompleta_medico'], true)) {
+            return response()->json([
+                'ok' => false,
+                'error' => 'No se pueden enviar invitaciones porque la consulta ya finalizó.',
+            ], 409);
+        }
+
         $invitado = VideoConsultaInvitado::create([
             'video_consulta_id' => $consulta->id,
             'nombre' => $request->nombre,
             'email' => $request->email,
             'token' => Str::random(60),
-            'estado' => 'pendiente',
+            'estado' => 'enlace_enviado',
             'ultimo_envio_at' => now(),
         ]);
 
