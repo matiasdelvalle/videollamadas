@@ -5,11 +5,11 @@ import tailwindcss from '@tailwindcss/vite'
 import fs from 'fs'
 
 export default defineConfig({
+    base: process.env.VITE_BASE_URL ?? '/',
     plugins: [
         laravel({
             input: ['resources/css/app.css', 'resources/js/app.js'],
             refresh: true,
-            buildDirectory: 'dist',
         }),
         vue(),
         tailwindcss(),
